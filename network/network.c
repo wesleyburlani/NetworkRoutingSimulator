@@ -1,24 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "improvc/improvc.h"
-
-
-typedef struct router_t{
-
-	int id;
-	int port;
-	ip_t* ip;
-
-}router_t;
-
-typedef struct link_t{
-
-	int router1;
-	int router2;
-	double coust;
-
-}link_t;
 
 router_t* new_router(){
 
@@ -127,17 +106,25 @@ graph_t* graph_from_routers(list_t* routers, list_t* links){
 	return graph;
 }
 
-int main(){
+list_t* get_routing_table(graph_t* graph, int id_router){
 
-	list_t* routers = read_routers();
-	list_t* links = read_links();
-	list_print(routers, print_router);
-	list_print(links, print_link);
+	list_t* routing_table = new_list(sizeof(graph_path_t));
 
-	graph_t* graph = graph_from_routers(routers, links);
+	list_t* total = djikstra(graph, compare_router);
 
-	list_t* l = djikstra(graph, compare_router);
-	list_print(l, print_path);
+	node_t* element = total->head;
 
-	return 0;
+	while(element != NULL){
+
+		graph_path_t* path = (graph_path_t*)element->data;
+
+		int from = ((router_t*)path->from->data)->id;
+
+		if(from == id_router)
+			list_append(routing_table, path);
+
+		element = element->next;
+	}
+
+	return routing_table;
 }
