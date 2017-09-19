@@ -14,7 +14,7 @@ void print_router(void* router){
 
 	router_t* r = (router_t*)router;
 	printf("id: %d, port: %d, ", r->id, r->port);
-	ip_print(r->ip);
+	printf("%s\n" , r->ip);
 }
 
 void print_link(void* link){
@@ -53,7 +53,7 @@ list_t* read_routers(){
 		list_t* columns = string_split(data, "\t");
 		router->id = atoi((char*)list_get_element(columns, 0)->data);
 		router->port = atoi((char*)list_get_element(columns, 1)->data);
-		router->ip = ip_from_string((char*)list_get_element(columns, 2)->data);
+		router->ip = (char*)list_get_element(columns, 2)->data;
 		list_append(list, router);
 		element = element->next;
 	}

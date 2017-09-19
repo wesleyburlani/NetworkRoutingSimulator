@@ -19,10 +19,7 @@ int execute(char* router){
 		exit(1);
      }
      else if (pid == 0) { 
-		if (execv(PROGRAM, parmList) < 0) {
-		   printf("*** ERROR: exec failed\n");
-		   exit(1);
-		}
+		system("xterm -e \"./program 1\"");
      }
 
      return pid;

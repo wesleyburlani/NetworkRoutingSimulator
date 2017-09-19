@@ -8,7 +8,7 @@ typedef struct router_t{
 
 	int id;
 	int port;
-	ip_t* ip;
+	char* ip;
 
 }router_t;
 
