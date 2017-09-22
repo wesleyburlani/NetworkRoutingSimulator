@@ -60,35 +60,38 @@ void* call_sender(void* arg_router)
     
     memset((char *) &si_other, 0, sizeof(si_other));
     si_other.sin_family = AF_INET;
-    si_other.sin_port = htons(router->port);
-     
-    if (inet_aton(router->ip , &si_other.sin_addr) == 0) 
-    {
-        fprintf(stderr, "sender: inet_aton() failed\n");
-        exit(1);
-    }
+    
  
     while(1)
     {
 		MessageData* data = GetMessage();
-			
-		int id = data->routerId;
-		node_t* node = (node_t*)list_get_by_data((router->routingTable), &(id), compare_dest_path);
+		// find in routing table the from instancied router to destination;
+		node_t* node = (node_t*)list_get_by_data((router->routingTable), &(data->routerId), compare_dest_path);
 
 		if(node == NULL){
 			printf("sender: router with id %d not exist", data->routerId);
 			continue;
 		}
-
+		// get table info with path to send package
 		graph_path_t* routerToSend = (graph_path_t*)node->data;
+		// get first neighboor to send package
+		router_t* neighboor = (router_t*)routerToSend->start->data;
+		// send message to correct port
+		si_other.sin_port = htons(neighboor->port);
+     	// set ip to destination ip
+    	if (inet_aton(neighboor->ip , &si_other.sin_addr) == 0) 
+    	{
+        	fprintf(stderr, "sender: inet_aton() failed\n");
+        	exit(1);
+    	}
 
-		printf("sender: send to router %d\n", *(int*)routerToSend->to->data);
+		printf("sender: send to router %d\n", neighboor->id);
 
         if (sendto(s, data->message, strlen(data->message) , 0 , (struct sockaddr *) &si_other, slen)==-1)
         {
             die("sender: sendto()\n");
         }
-         
+     
         //receive a reply and print it
         //clear the buffer by filling null, it might have previously received data
         memset(buf,'\0', BUFLEN);
