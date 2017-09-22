@@ -33,9 +33,9 @@ MessageData* NewMessageData(){
 MessageData* GetMessage(){
 
 	MessageData* data = NewMessageData();
-	printf("Type router name to send message: ");
+	printf("type router name to send message: ");
 	scanf("%d", &(data->routerId));
-	printf("Type message to send: ");
+	printf("type message to send: ");
 	scanf("%s", data->message);
 	return data;
 }
@@ -79,7 +79,7 @@ void send_to_next(router_t* router, MessageData* data){
     	exit(1);
 	}
 
-	printf("sender: send to router %d\n", neighboor->id);
+	printf("sender: sending packet to router %d\n", neighboor->id);
 
     if (sendto(socketId, data, sizeof(data)+(BUFLEN) , 0 , (struct sockaddr *) &socketAddress, slen)==-1)
         die("sender: sendto()\n");
@@ -88,7 +88,8 @@ void send_to_next(router_t* router, MessageData* data){
     //clear the buffer by filling null, it might have previously received data
     memset(buf,'\0', BUFLEN);
     //try to receive some data, this is a blocking call
-    if (recvfrom(socketId, data, sizeof(data), 0, (struct sockaddr *) &socketAddress, &slen) == -1)
+    int ack = 0;
+    if (recvfrom(socketId, &ack, sizeof(ack), 0, (struct sockaddr *) &socketAddress, &slen) == -1)
         die("sender: recvfrom()\n");
          
     puts(buf);
@@ -108,8 +109,6 @@ void* call_sender(void* arg_router)
 void* call_receiver(void* arg_router)
 {
 	router_t* router = (router_t*)arg_router;
-
-	print_router(router);
 
     struct sockaddr_in si_me, si_other;
      
@@ -153,13 +152,20 @@ void* call_receiver(void* arg_router)
         }
          
         //print details of the client/peer and the data received
-        printf("receiver: Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
+        printf("\nreceiver: Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
         
         if(data->routerId == router->id){
-        	printf("receiver: Data: %s\n" , data->message);
+        	printf("Data: %s\n" , data->message);
+
+        }
+        else{
+
+        	printf("package will be sent to router: %d\n" , data->routerId);
+        	send_to_next(router, data);
         }
         //now reply the client with the same data
-        if (sendto(s, data, recv_len, 0, (struct sockaddr*) &si_other, slen) == -1)
+        int ack = 1;
+        if (sendto(s, &ack, sizeof(ack), 0, (struct sockaddr*) &si_other, slen) == -1)
         {
             die("receiver: sendto()\n");
         }
@@ -177,6 +183,27 @@ void start_operation(router_t* router){
 	pthread_join(threads[0], NULL);
 }
 
+void print_routingTable(void* v){
+
+	graph_path_t* path = (graph_path_t*)v;
+	printf("weight %8.2lf ", path->distance);
+	printf("to destination %d ",  *(int*)path->to->data);
+	printf("starting by: %d\n",  *(int*)path->start->data);
+}
+
+void print_init(router_t* router){
+	printf("Router info...\n");
+	printf("----------------------------------------------\n");
+	printf("Router   id: %d\n", router->id);
+	printf("Router port: %d\n", router->port);
+	printf("Router   ip: %s\n" , router->ip);
+	printf("----------------------------------------------\n");
+	printf("Loading routing table...\n");
+	printf("----------------------------------------------\n");
+	list_print(router->routingTable, print_routingTable);
+	printf("----------------------------------------------\n");
+}
+
 int main(int argc, char **argv){
 
 	int router_id = atoi(argv[1]);
@@ -187,10 +214,12 @@ int main(int argc, char **argv){
 
 	graph_t* graph = graph_from_routers(routers, links);
 
-	list_t* routingTable = get_routing_table(graph, 1);
+	list_t* routingTable = get_routing_table(graph, router_id);
 
 	router_t* router = (router_t*)list_get_by_data(routers, &router_id, compare_id_to_router)->data;
 	router->routingTable = routingTable;
+
+	print_init(router);	
 
 	start_operation(router);
 
