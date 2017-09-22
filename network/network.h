@@ -9,7 +9,7 @@ typedef struct router_t{
 	int id;
 	int port;
 	char* ip;
-
+	list_t* routingTable;
 }router_t;
 
 typedef struct link_t{

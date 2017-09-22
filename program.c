@@ -13,6 +13,33 @@
 
 #define BUFLEN 512  //Max length of buffer
 
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+typedef struct MessageData{
+	
+	int routerId;
+	char* message;
+
+}MessageData;
+
+MessageData* NewMessageData(){
+
+	MessageData* data = malloc(sizeof(MessageData));
+	data->message = malloc(sizeof(char));
+	return data;
+}
+
+MessageData* GetMessage(){
+
+	MessageData* data = NewMessageData();
+	printf("Type router name to send message: ");
+	scanf("%d", &(data->routerId));
+	printf("Type message to send: ");
+	scanf("%s", data->message);
+	return data;
+}
+
+
 void die(char *s)
 {
     perror(s);
@@ -29,30 +56,37 @@ void* call_sender(void* arg_router)
     char message[BUFLEN];
  
     if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
-    {
-        die("socket");
-    }
- 
+        die("sender: Error getting socket\r\n");
+    
     memset((char *) &si_other, 0, sizeof(si_other));
     si_other.sin_family = AF_INET;
     si_other.sin_port = htons(router->port);
      
     if (inet_aton(router->ip , &si_other.sin_addr) == 0) 
     {
-        fprintf(stderr, "inet_aton() failed\n");
+        fprintf(stderr, "sender: inet_aton() failed\n");
         exit(1);
     }
  
     while(1)
     {
-        printf("Enter message : ");
-        //gets(message);
-        scanf("%s",message);
-         
-        //send the message
-        if (sendto(s, message, strlen(message) , 0 , (struct sockaddr *) &si_other, slen)==-1)
+		MessageData* data = GetMessage();
+			
+		int id = data->routerId;
+		node_t* node = (node_t*)list_get_by_data((router->routingTable), &(id), compare_dest_path);
+
+		if(node == NULL){
+			printf("sender: router with id %d not exist", data->routerId);
+			continue;
+		}
+
+		graph_path_t* routerToSend = (graph_path_t*)node->data;
+
+		printf("sender: send to router %d\n", *(int*)routerToSend->to->data);
+
+        if (sendto(s, data->message, strlen(data->message) , 0 , (struct sockaddr *) &si_other, slen)==-1)
         {
-            die("sendto()");
+            die("sender: sendto()\n");
         }
          
         //receive a reply and print it
@@ -61,7 +95,7 @@ void* call_sender(void* arg_router)
         //try to receive some data, this is a blocking call
         if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen) == -1)
         {
-            die("recvfrom()");
+            die("sender: recvfrom()\n");
         }
          
         puts(buf);
@@ -85,7 +119,7 @@ void* call_receiver(void* arg_router)
     //create a UDP socket
     if ((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
     {
-        die("socket");
+        die("receiver: socket\n");
     }
      
     // zero out the structure
@@ -98,13 +132,13 @@ void* call_receiver(void* arg_router)
     //bind socket to port
     if( bind(s , (struct sockaddr*)&si_me, sizeof(si_me) ) == -1)
     {
-        die("bind");
+        die("receiver: bind\n");
     }
      
     //keep listening for data
     while(1)
     {
-        printf("Waiting for data...");
+        //printf("receiver: Waiting for data...\n");
         fflush(stdout);
         //receive a reply and print it
         //clear the buffer by filling null, it might have previously received data
@@ -113,17 +147,17 @@ void* call_receiver(void* arg_router)
         //try to receive some data, this is a blocking call
         if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen)) == -1)
         {
-            die("recvfrom()");
+            die("receiver: recvfrom()\n");
         }
          
         //print details of the client/peer and the data received
-        printf("Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-        printf("Data: %s\n" , buf);
+        printf("receiver: Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
+        printf("receiver: Data: %s\n" , buf);
          
         //now reply the client with the same data
         if (sendto(s, buf, recv_len, 0, (struct sockaddr*) &si_other, slen) == -1)
         {
-            die("sendto()");
+            die("receiver: sendto()\n");
         }
     }
  
@@ -143,16 +177,16 @@ int main(int argc, char **argv){
 
 	int router_id = atoi(argv[1]);
 	printf("Starting router %d\n", router_id);
-	router_id++;
 
 	list_t* routers = read_routers();
 	list_t* links = read_links();
 
 	graph_t* graph = graph_from_routers(routers, links);
 
-	list_t* l = get_routing_table(graph, 1);
-	
-	router_t* router = (router_t*)list_get_by_data(routers, &router_id, compare_router)->data;
+	list_t* routingTable = get_routing_table(graph, 1);
+
+	router_t* router = (router_t*)list_get_by_data(routers, &router_id, compare_id_to_router)->data;
+	router->routingTable = routingTable;
 
 	start_operation(router);
 

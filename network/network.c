@@ -34,9 +34,18 @@ void print_path(void* v){
 }
 
 
+int compare_dest_path(void* r1, void* r2){
+	return *(int*)((graph_path_t*)r1)->to->data == *(int*)r2;
+}
+
 int compare_router(void* r1, void* r2){
 
 	return ((router_t*)r1)->id == ((router_t*)r2)->id;
+}
+
+int compare_id_to_router(void* r1, void* r2){
+
+	return *(int*)r2 == ((router_t*)r1)->id;
 }
 
 list_t* read_routers(){
