@@ -11,21 +11,22 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#define BUFLEN 512  //Max length of buffer
+#define BUFLEN 100  //Max length of buffer
+#define SocketAddress struct sockaddr_in
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct MessageData{
 	
 	int routerId;
-	char* message;
+	char message[BUFLEN];
 
 }MessageData;
 
 MessageData* NewMessageData(){
 
 	MessageData* data = malloc(sizeof(MessageData));
-	data->message = malloc(sizeof(char));
+	//data->message = malloc(sizeof(char));
 	return data;
 }
 
@@ -46,65 +47,61 @@ void die(char *s)
     exit(1);
 }
 
-void* call_sender(void* arg_router)
-{
-	router_t* router = (router_t*)arg_router;
+void send_to_next(router_t* router, MessageData* data){
 
-    struct sockaddr_in si_other;
-    int s, i, slen=sizeof(si_other);
+	SocketAddress socketAddress;
+    int socketId, i, slen=sizeof(socketAddress);
     char buf[BUFLEN];
     char message[BUFLEN];
  
-    if ( (s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+    if ((socketId=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
         die("sender: Error getting socket\r\n");
     
-    memset((char *) &si_other, 0, sizeof(si_other));
-    si_other.sin_family = AF_INET;
+    memset((char *) &socketAddress, 0, sizeof(socketAddress));
+    socketAddress.sin_family = AF_INET;
+
+    node_t* node = (node_t*)list_get_by_data((router->routingTable), &(data->routerId), compare_dest_path);
+
+	if(node == NULL){
+		printf("sender: router with id %d not exist", data->routerId);
+		return;
+	}
+	// get table info with path to send package
+	graph_path_t* routerToSend = (graph_path_t*)node->data;
+	// get first neighboor to send package
+	router_t* neighboor = (router_t*)routerToSend->start->data;
+	// send message to correct port
+	socketAddress.sin_port = htons(neighboor->port);
+ 	// set ip to destination ip
+	if (inet_aton(neighboor->ip , &socketAddress.sin_addr) == 0) 
+	{
+    	fprintf(stderr, "sender: inet_aton() failed\n");
+    	exit(1);
+	}
+
+	printf("sender: send to router %d\n", neighboor->id);
+
+    if (sendto(socketId, data, sizeof(data)+(BUFLEN) , 0 , (struct sockaddr *) &socketAddress, slen)==-1)
+        die("sender: sendto()\n");
     
- 
+    //receive a reply and print it
+    //clear the buffer by filling null, it might have previously received data
+    memset(buf,'\0', BUFLEN);
+    //try to receive some data, this is a blocking call
+    if (recvfrom(socketId, data, sizeof(data), 0, (struct sockaddr *) &socketAddress, &slen) == -1)
+        die("sender: recvfrom()\n");
+         
+    puts(buf);
+}
+
+void* call_sender(void* arg_router)
+{
+	router_t* router = (router_t*)arg_router;  
     while(1)
     {
 		MessageData* data = GetMessage();
-		// find in routing table the from instancied router to destination;
-		node_t* node = (node_t*)list_get_by_data((router->routingTable), &(data->routerId), compare_dest_path);
-
-		if(node == NULL){
-			printf("sender: router with id %d not exist", data->routerId);
-			continue;
-		}
-		// get table info with path to send package
-		graph_path_t* routerToSend = (graph_path_t*)node->data;
-		// get first neighboor to send package
-		router_t* neighboor = (router_t*)routerToSend->start->data;
-		// send message to correct port
-		si_other.sin_port = htons(neighboor->port);
-     	// set ip to destination ip
-    	if (inet_aton(neighboor->ip , &si_other.sin_addr) == 0) 
-    	{
-        	fprintf(stderr, "sender: inet_aton() failed\n");
-        	exit(1);
-    	}
-
-		printf("sender: send to router %d\n", neighboor->id);
-
-        if (sendto(s, data->message, strlen(data->message) , 0 , (struct sockaddr *) &si_other, slen)==-1)
-        {
-            die("sender: sendto()\n");
-        }
-     
-        //receive a reply and print it
-        //clear the buffer by filling null, it might have previously received data
-        memset(buf,'\0', BUFLEN);
-        //try to receive some data, this is a blocking call
-        if (recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen) == -1)
-        {
-            die("sender: recvfrom()\n");
-        }
-         
-        puts(buf);
-    }
- 
-    close(s);
+		send_to_next(router, data);
+    }	
     return 0;
 }
 
@@ -141,6 +138,8 @@ void* call_receiver(void* arg_router)
     //keep listening for data
     while(1)
     {
+    	MessageData* data = NewMessageData();
+
         //printf("receiver: Waiting for data...\n");
         fflush(stdout);
         //receive a reply and print it
@@ -148,17 +147,19 @@ void* call_receiver(void* arg_router)
         memset(buf,'\0', BUFLEN);
 
         //try to receive some data, this is a blocking call
-        if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen)) == -1)
+        if ((recv_len = recvfrom(s, data, sizeof(data)+(BUFLEN), 0, (struct sockaddr *) &si_other, &slen)) == -1)
         {
             die("receiver: recvfrom()\n");
         }
          
         //print details of the client/peer and the data received
         printf("receiver: Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-        printf("receiver: Data: %s\n" , buf);
-         
+        
+        if(data->routerId == router->id){
+        	printf("receiver: Data: %s\n" , data->message);
+        }
         //now reply the client with the same data
-        if (sendto(s, buf, recv_len, 0, (struct sockaddr*) &si_other, slen) == -1)
+        if (sendto(s, data, recv_len, 0, (struct sockaddr*) &si_other, slen) == -1)
         {
             die("receiver: sendto()\n");
         }
