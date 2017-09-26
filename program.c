@@ -13,6 +13,8 @@
 
 #define BUFLEN 100  //Max length of buffer
 #define SocketAddress struct sockaddr_in
+#define TIMEOUT 5
+#define TRIES 3
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -39,7 +41,6 @@ MessageData* GetMessage(){
 	scanf("%s", data->message);
 	return data;
 }
-
 
 void die(char *s)
 {
@@ -80,17 +81,33 @@ void send_to_next(router_t* router, MessageData* data){
 
 	printf("sender: sending packet to router %d\n", neighboor->id);
 
-    if (sendto(socketId, data, sizeof(data)+(BUFLEN) , 0 , (struct sockaddr *) &socketAddress, slen)==-1)
-        die("sender: sendto()\n");
-    
-    //receive a reply and print it
-    //clear the buffer by filling null, it might have previously received data
-    memset(buf,'\0', BUFLEN);
-    //try to receive some data, this is a blocking call
-    int ack = 0;
-    if (recvfrom(socketId, &ack, sizeof(ack), 0, (struct sockaddr *) &socketAddress, &slen) == -1)
-        die("sender: recvfrom()\n");
-         
+	int tries = TRIES;
+	int ack = 0;
+	while(tries--){
+
+		if (sendto(socketId, data, sizeof(data)+(BUFLEN) , 0 , (struct sockaddr *) &socketAddress, slen)==-1)
+			die("sender: sendto()\n");
+		
+		//receive a reply and print it
+		//clear the buffer by filling null, it might have previously received data
+		memset(buf,'\0', BUFLEN);
+		//try to receive some data, this is a blocking call
+		
+		struct timeval read_timeout;
+		read_timeout.tv_sec = TIMEOUT;
+		read_timeout.tv_usec = 10;
+		
+		setsockopt(socketId, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+
+		if (recvfrom(socketId, &ack, sizeof(ack), 0, (struct sockaddr *) &socketAddress, &slen) == -1)
+			printf("Error send package, retrying\n");
+		
+		if(ack)
+			break;
+	}
+	if(!ack)
+		printf("It's not possible to send package\n");
+	
     puts(buf);
 }
 
