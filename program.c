@@ -28,7 +28,6 @@ typedef struct MessageData{
 MessageData* NewMessageData(){
 
 	MessageData* data = malloc(sizeof(MessageData));
-	//data->message = malloc(sizeof(char));
 	return data;
 }
 
@@ -37,8 +36,11 @@ MessageData* GetMessage(){
 	MessageData* data = NewMessageData();
 	printf("type router name to send message: ");
 	scanf("%d", &(data->routerId));
+	getchar();
 	printf("type message to send: ");
-	scanf("%s", data->message);
+	fflush(stdout);
+	fflush(stdin);
+	fgets(data->message, BUFLEN, stdin);
 	return data;
 }
 
@@ -137,7 +139,7 @@ void* call_receiver(void* arg_router){
     	MessageData* data = NewMessageData();
         fflush(stdout);
 
-        if ((receivedDataLength = recvfrom(socketId, data, sizeof(data)+(BUFLEN), 0, (struct sockaddr *) &destinationSocket, &slen)) == -1)
+        if ((receivedDataLength = recvfrom(socketId, data, sizeof(data)+(BUFLEN), 0, (void*)&destinationSocket, &slen)) == -1)
             die("receiver: recvfrom()\n");
          
         printf("\nreceiver: Received packet from %s:%d\n", inet_ntoa(destinationSocket.sin_addr), ntohs(destinationSocket.sin_port));
@@ -151,7 +153,7 @@ void* call_receiver(void* arg_router){
         }
         
         int ack = 1;
-        if (sendto(socketId, &ack, sizeof(ack), 0, (struct sockaddr*) &destinationSocket, slen) == -1)
+        if (sendto(socketId, &ack, sizeof(ack), 0, (void*)&destinationSocket, slen) == -1)
             die("receiver: sendto()\n");
     }
  
@@ -171,8 +173,12 @@ void print_routingTable(void* v){
 
 	graph_path_t* path = (graph_path_t*)v;
 	printf("weight %8.2lf ", path->distance);
-	printf("to destination %d ",  *(int*)path->to->data);
-	printf("starting by: %d\n",  *(int*)path->start->data);
+	if(path->to != NULL)
+		printf("to destination %d ",  *(int*)path->to->data);
+	if(path->start != NULL)
+		printf("starting by: %d\n",  *(int*)path->start->data);
+	else
+		printf("unreachable\n");
 }
 
 void print_init(router_t* router){

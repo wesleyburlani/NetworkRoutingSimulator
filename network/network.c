@@ -58,6 +58,7 @@ list_t* read_routers(){
 	while(element != NULL){ 
 
 		char* data = ((char*)element->data);
+		printf("%s\n", data);
 		router_t* router = new_router();
 		list_t* columns = string_split(data, "\t");
 		router->id = atoi((char*)list_get_element(columns, 0)->data);
@@ -119,7 +120,7 @@ list_t* get_routing_table(graph_t* graph, int id_router){
 
 	list_t* routing_table = new_list(sizeof(graph_path_t));
 
-	list_t* total = djikstra(graph, compare_router);
+	list_t* total = GetMinDistances(graph, compare_router);
 
 	node_t* element = total->head;
 
