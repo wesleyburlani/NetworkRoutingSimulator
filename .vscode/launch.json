@@ -2,11 +2,22 @@
         "version": "0.2.0",
         "configurations": [
             {
+                "name": ".NET Core Launch (console)",
+                "type": "coreclr",
+                "request": "launch",
+                "preLaunchTask": "",
+                "program": "/home/psburl/Documents/coretest/bin/Debug/netcoreapp2.0/Documents.dll",
+                "args": [],
+                "cwd": "${workspaceRoot}",
+                "stopAtEntry": false,
+                "console": "internalConsole"
+            },
+            {
                 "name": "(gdb) Launch",
                 "type": "cppdbg",
                 "request": "launch",
                 "program": "/home/psburl/NetworkRoutingSimulator/program",
-                "args": [],
+                "args": ["7"],
                 "stopAtEntry": false,
                 "cwd": "/home/psburl/NetworkRoutingSimulator",
                 "environment": [],

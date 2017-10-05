@@ -61,16 +61,30 @@ void send_to_next(router_t* router, MessageData* data){
     memset((char *) &socketAddress, 0, sizeof(socketAddress));
     socketAddress.sin_family = AF_INET;
 
-    node_t* node = (node_t*)list_get_by_data((router->routingTable), &(data->routerId), compare_dest_path);
-
+	node_t* node = (node_t*)list_get_by_data((router->routingTable), &(data->routerId), compare_dest_path);
+	
 	if(node == NULL){
 		printf("sender: router with id %d not exist", data->routerId);
 		return;
 	}
 	// get table info with path to send package
 	graph_path_t* routerToSend = (graph_path_t*)node->data;
+
+	if(routerToSend == NULL){
+		printf("sender: unreacheable\n");
+		return;
+	}
 	// get first neighboor to send package
+	if(routerToSend->start == NULL){
+		printf("sender: unreacheable\n");
+		return;
+	}
+
 	router_t* neighboor = (router_t*)routerToSend->start->data;
+	if(neighboor == NULL){
+		printf("sender: unreacheable\n");
+		return;
+	}
 	// send message to correct port
 	socketAddress.sin_port = htons(neighboor->port);
  	// set ip to destination ip
@@ -78,7 +92,6 @@ void send_to_next(router_t* router, MessageData* data){
     	fprintf(stderr, "sender: inet_aton() failed\n");
     	exit(1);
 	}
-
 	printf("sender: sending packet to router %d\n", neighboor->id);
 
 	int tries = TRIES;
