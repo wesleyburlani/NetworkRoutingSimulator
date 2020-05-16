@@ -51,7 +51,7 @@ int compare_id_to_router(void* r1, void* r2){
 list_t* read_routers(){
 
 	list_t* list = new_list(sizeof(router_t));
-	char* router_config = file_read("inputs/roteador.config");
+	char* router_config = file_read("inputs/routers.config");
 	list_t* lines = string_split(router_config, "\n");
 
 	node_t* element = lines->head;
@@ -74,7 +74,7 @@ list_t* read_routers(){
 list_t* read_links(){
 
 	list_t* list = new_list(sizeof(link_t));
-	char* router_config = file_read("inputs/enlaces.config");
+	char* router_config = file_read("inputs/links.config");
 	list_t* lines = string_split(router_config, "\n");
 
 	node_t* element = lines->head;
