@@ -1,5 +1,10 @@
 {
     "files.associations": {
-        "limits": "c"
+        ".env": "plaintext",
+        "limits": "c",
+        "socket.h": "c",
+        "improvc.h": "c",
+        "message.h": "c",
+        "utils.h": "c"
     }
 }

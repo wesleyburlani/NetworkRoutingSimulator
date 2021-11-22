@@ -1,6 +1,5 @@
 
 router_t* new_router(){
-
 	router_t* router = malloc(sizeof(router_t));
 	return router;
 }
@@ -11,7 +10,6 @@ link_t* new_link(){
 }
 
 void print_router(void* router){
-
 	router_t* r = (router_t*)router;
 	printf("id: %d, port: %d, ", r->id, r->port);
 	printf("%s\n" , r->ip);
@@ -25,7 +23,6 @@ void print_link(void* link){
 }
 
 void print_path(void* v){
-
 	graph_path_t* path = (graph_path_t*)v;
 	printf("from: %d ",  *(int*)path->from->data);
 	printf("to: %d ",  *(int*)path->to->data);
@@ -39,24 +36,20 @@ int compare_dest_path(void* r1, void* r2){
 }
 
 int compare_router(void* r1, void* r2){
-
 	return ((router_t*)r1)->id == ((router_t*)r2)->id;
 }
 
 int compare_id_to_router(void* r1, void* r2){
-
 	return *(int*)r2 == ((router_t*)r1)->id;
 }
 
 list_t* read_routers(){
-
 	list_t* list = new_list(sizeof(router_t));
 	char* router_config = file_read("inputs/routers.config");
 	list_t* lines = string_split(router_config, "\n");
 
 	node_t* element = lines->head;
 	while(element != NULL){ 
-
 		char* data = ((char*)element->data);
 		printf("%s\n", data);
 		router_t* router = new_router();
@@ -67,19 +60,16 @@ list_t* read_routers(){
 		list_append(list, router);
 		element = element->next;
 	}
-
 	return list;
 }
 
 list_t* read_links(){
-
 	list_t* list = new_list(sizeof(link_t));
 	char* router_config = file_read("inputs/links.config");
 	list_t* lines = string_split(router_config, "\n");
 
 	node_t* element = lines->head;
 	while(element != NULL){ 
-
 		char* data = ((char*)element->data);
 		link_t* link = new_link();
 		list_t* columns = string_split(data, "\t");
@@ -89,12 +79,10 @@ list_t* read_links(){
 		list_append(list, link);
 		element = element->next;
 	}
-
 	return list;
 }
 
 graph_t* graph_from_routers(list_t* routers, list_t* links){
-
 	graph_t* graph = new_graph(sizeof(router_t), 0);
 
 	node_t* element = routers->head;
@@ -112,29 +100,20 @@ graph_t* graph_from_routers(list_t* routers, list_t* links){
 		graph_add_adjacency_by_data(graph, &id1, &id2, link->coust, compare_router);
 		element = element->next;
 	}
-
 	return graph;
 }
 
 list_t* get_routing_table(graph_t* graph, int id_router){
-
 	list_t* routing_table = new_list(sizeof(graph_path_t));
-
-	list_t* total = GetMinDistances(graph, compare_router);
-
+	list_t* total = get_min_distances(graph, compare_router);
 	node_t* element = total->head;
 
 	while(element != NULL){
-
 		graph_path_t* path = (graph_path_t*)element->data;
-
 		int from = ((router_t*)path->from->data)->id;
-
 		if(from == id_router)
 			list_append(routing_table, path);
-
 		element = element->next;
 	}
-
 	return routing_table;
 }
