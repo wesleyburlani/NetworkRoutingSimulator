@@ -7,5 +7,6 @@
         "message.h": "c",
         "utils.h": "c",
         "unistd.h": "c"
-    }
+    },
+    "C_Cpp.errorSquiggles": "Disabled"
 }
