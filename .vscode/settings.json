@@ -5,6 +5,7 @@
         "socket.h": "c",
         "improvc.h": "c",
         "message.h": "c",
-        "utils.h": "c"
+        "utils.h": "c",
+        "unistd.h": "c"
     }
 }

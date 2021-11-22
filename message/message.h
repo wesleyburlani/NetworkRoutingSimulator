@@ -19,14 +19,15 @@
 #define TRIES 3
 #define socket_address_t struct sockaddr_in
 
-typedef struct message{
-	int router_id;
-	char message[BUFFER_LENGTH];
-    int buffer_length;
-}message_t;
+typedef struct message
+{
+  int router_id;
+  char message[BUFFER_LENGTH];
+  int buffer_length;
+} message_t;
 
-message_t* new_message();
-message_t* ask_for_message();
+message_t *new_message();
+message_t *ask_for_message();
 
 #include "message.c"
 
