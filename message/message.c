@@ -17,7 +17,7 @@ message_t* ask_for_message(){
 	return data;
 }
 
-int is_unreachable_node(node_t* node, int router_id){
+void test_unreachable_node(node_t* node, int router_id){
 	if(node == NULL){
 		printf("sender: router with id %d not exist", router_id);
 		return;
@@ -61,7 +61,7 @@ void send_message(router_t* router, message_t* data){
 		printf("sender: router with id %d not exist", data->router_id);
 		return;
 	}
-	is_unreachable_node(node, data->router_id);
+	test_unreachable_node(node, data->router_id);
 
 	graph_path_t* route_to_send = (graph_path_t*)node->data;
 	router_t* neighboor = (router_t*)route_to_send->start->data;

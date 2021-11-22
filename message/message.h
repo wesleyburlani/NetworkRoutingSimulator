@@ -20,7 +20,7 @@
 #define socket_address_t struct sockaddr_in
 
 typedef struct message{
-	int routerId;
+	int router_id;
 	char message[BUFFER_LENGTH];
     int buffer_length;
 }message_t;
